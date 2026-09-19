@@ -1,58 +1,86 @@
-# AttoFlow — High-Frequency Trading & Microstructure Replay Engine
+# AttoFlow — High-Frequency Execution Engine & Microstructure Replay Terminal
 
-![Language](https://img.shields.io/badge/C%2B%2B-20-00599C?style=flat&logo=c%2B%2B)
-![Rust](https://img.shields.io/badge/Rust-1.80%2B-black?style=flat&logo=rust)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?style=flat&logo=typescript)
-![License](https://img.shields.io/badge/License-MIT-green.svg)
-![Status](https://img.shields.io/badge/Execution-Sub--Microsecond-critical)
+[![Language](https://img.shields.io/badge/C%2B%2B-20-00599C?style=for-the-badge&logo=c%2B%2B)](cpp_core/)
+[![Rust](https://img.shields.io/badge/Rust-1.80%2B-black?style=for-the-badge&logo=rust)](runner/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?style=for-the-badge&logo=typescript)](dashboard/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
+[![Latency](https://img.shields.io/badge/Execution-Sub--Microsecond-critical?style=for-the-badge)](cpp_core/)
 
-**AttoFlow** is a deterministic, event-driven High-Frequency Trading (HFT) simulation platform and microstructure replay terminal. It models real-world exchange matching dynamics at nanosecond precision: Price-Time (FIFO) queue priority, flight latency, order cancellations, post-only (GTX) order rejections, and continuous market trades.
+**AttoFlow** is a deterministic, event-driven High-Frequency Trading (HFT) simulation platform and quantitative market-microstructure replay terminal. Engineered for extreme fidelity, AttoFlow models exchange matching engine dynamics down to sub-microsecond precision: **Price-Time (FIFO) queue position priority**, packet flight latency, post-only (GTX) order rejections, adverse selection, and tick-by-tick orderbook reconstruction.
 
-The platform combines a **zero-allocation C++20 Limit Order Book matching core**, a **high-throughput Rust simulation runner** capable of processing over **6,000,000 events/sec**, and a **Bloomberg-style IBM VGA text-mode execution terminal** featuring real-time P&L tracking and Order Flow Imbalance (OFI) alpha signals.
+The architecture combines a **cache-aligned, zero-allocation C++20 Limit Order Book core**, a **high-throughput Rust simulation runner** (>6,000,000 events/sec), and a **retro IBM VGA text-mode financial terminal UI** featuring real-time P&L risk accounting, micro-price fair value models, and Order Flow Imbalance (OFI) signal alpha.
 
 ---
 
-## Architecture Overview
+## 📸 Replay Terminal Cockpit
 
+![AttoFlow High-Frequency Execution Terminal](docs/assets/dashboard_terminal.png)
+
+> **Terminal Interface**: IBM VGA 9x16 bitmap font, CGA/EGA 16-color palette, rendering 10 real-time quantitative panels (Level-2 Orderbook Ladder, Queue Position, Order Round-Trip Latency, Microsecond Trades, P&L Risk Engine, and Alpha Signals).
+
+---
+
+## ⚡ Key Highlights & Core Capabilities
+
+| Feature | Description | Engineering Implementation |
+| :--- | :--- | :--- |
+| **C++20 LOB Core** | Zero heap allocation in hot path, $O(1)$ insertions and cancellations. | Cache-line aligned (`alignas(64)`), doubly-linked price level buckets. |
+| **Rust Event Engine** | Replays real tick sessions at **6.14M events/sec**. | SIMD-assisted binary `.hbr` parsing, non-blocking lock-free event loop. |
+| **Realistic Queue Modeling** | Models exact position ahead of your order in the orderbook queue. | Probabilistic Price-Time priority models (`PowerProbQueueModel3`). |
+| **Flight Latency & Adverse Selection** | Simulates exchange packet flight times ($2\text{--}200\text{ ms}$). | Post-only (GTX) order rejection handling & queue join delays. |
+| **Order Flow Alpha (OFI)** | Real-time microstructural imbalance & micro-price signals. | Cont-Kukanov-Stoikov Order Flow Imbalance vector calculation. |
+| **Retro Terminal UI** | Bloomberg-style 10-panel cockpit built with Vite & TypeScript. | Pure CSS grid layout, 1-character grid alignment, zero canvas overhead. |
+
+---
+
+## 🏗️ System Architecture
+
+```text
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                             MARKET DATA PIPELINE                                 │
+│  [Binance USDT-M Futures] ──WebSocket──> [tools/collect.py] ──> [.hbr Recording] │
+└────────────────────────────────────────┬─────────────────────────────────────────┘
+                                         │
+                                         ▼
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                         HIGH-PERFORMANCE RUNNER (RUST)                           │
+│  - Binary .hbr Decoder & Event Dispatcher (6.14M events/sec)                     │
+│  - Strategy Engine: Grid Market Maker (Avellaneda-Stoikov Inventory Skew)        │
+│  - Realistic FIFO Queue Depth & Latency Emulator                                 │
+└────────────────────────────────────────┬─────────────────────────────────────────┘
+                                         │
+                                         ▼
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                         MATCHING ENGINE CORE (C++20)                             │
+│  - Zero-Allocation Limit Order Book (LOB)                                        │
+│  - Sub-500ns Order Insertion & Sub-280ns Order Cancellation                     │
+│  - Crossing Depth Sweeper & Price Level Bucketing                                │
+└────────────────────────────────────────┬─────────────────────────────────────────┘
+                                         │
+                                         ▼
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                      REPLAY TERMINAL COCKPIT (DASHBOARD)                         │
+│  - Retro IBM VGA 9x16 Bitmap Console (10 Synchronized Real-Time Panels)         │
+│  - Real-Time Risk & P&L Cockpit, Latency Sparklines, Trade Tape, OFI Gauges     │
+└──────────────────────────────────────────────────────────────────────────────────┘
 ```
-attoflow-hft/
-├── cpp_core/         # C++20 zero-allocation Limit Order Book & matching engine
-│   ├── include/      # Cache-aligned Order, PriceLevel, BBO, and LOB definitions
-│   ├── src/          # Matching engine (Limit, Market, Post-Only, Cancels)
-│   └── benchmark/    # Benchmark harness (>2.0M orders/sec, sub-500ns latency)
-├── runner/           # High-throughput Rust event-driven strategy runner
-│   └── src/          # Market-making strategy, queue position tracker, .hbr recorder
-├── dashboard/        # Retro IBM VGA text-mode financial replay terminal (Vite + TS)
-│   └── src/panels/   # LOB ladder, queue ahead, latency, fills, P&L, OFI, trades
-├── tools/            # Python data ingestion & telemetry pipeline
-│   ├── collect.py    # Binance USDT-M Futures WebSocket collector
-│   ├── prepare.py    # Raw stream converter to normalized tick arrays
-│   └── hbr.py        # Binary recording parser & microstructure analyzer
-└── data/             # High-frequency session recordings (.hbr) & feed telemetry
-```
 
 ---
 
-## Why Conventional Backtesters Fail in HFT
+## 🎯 Why Traditional Backtesters Fail in HFT
 
-Standard backtesters evaluate strategies using 1-second or 1-minute OHLCV bars. In high-frequency market making, this leads to catastrophic simulation bias:
+Standard quantitative backtesters evaluate strategies using 1-second or 1-minute OHLCV candles. In high-frequency market making, this creates severe simulation bias:
 
-1. **Queue Priority (FIFO / Price-Time)**: Placing an order at the touch (best bid) does not guarantee a fill when a market trade hits that price. Your order sits behind resting volume; the market must trade through every single unit ahead of you before your order receives execution. AttoFlow models this dynamically using probabilistic queue models (`PowerProbQueueModel3`).
-2. **Flight Latency & Adverse Selection**: Packet transmission across the WAN introduces $2\text{--}200\text{ ms}$ of feed latency and order round-trip time. If the market moves while your limit order is in flight, **post-only orders (GTX) get rejected**.
-3. **Execution Economics**: BTC quotes at the touch operate on a tight 1-tick spread ($0.013\text{ bps}$). Success requires accounting for maker rebates ($+0.005\%$) versus retail taker fees ($-0.02\%$).
+1. **Queue Priority (FIFO / Price-Time)**: Placing an order at the touch (best bid) does not guarantee execution when a market order hits that price. Your order sits behind resting volume; the market must trade through **every unit ahead of you** before your order receives execution.
+2. **Flight Latency & Adverse Selection**: Transmission over the WAN introduces latency. If the market moves while your limit order is in flight, **post-only orders (GTX) get rejected**, leaving you unhedged during violent price moves.
+3. **Micro-Economics**: BTC quotes at the touch operate on a tight 1-tick spread ($0.013\text{ bps}$). Profitability requires exact accounting for maker rebates ($+0.005\%$) versus retail taker fees ($-0.02\%$).
 
 ---
 
-## 1. C++20 Core Matching Engine (`cpp_core/`)
+## 🚀 C++20 Core Benchmark Results
 
-A standalone, ultra-low latency C++20 Limit Order Book engine designed for predictable, deterministic execution.
+Benchmarked on x86-64 Linux/Windows (`-O3 -std=c++20`):
 
-### Key Performance Highlights:
-* **Zero Heap Allocations in Hot Path**: Order structures are cache-line aligned (`alignas(64)`) to minimize cache misses.
-* **Price-Time Priority (FIFO)**: Doubly linked price level buckets provide $O(1)$ order insertion and cancellation.
-* **Crossing Depth Sweep**: Sweeps across multiple liquidity levels in microseconds.
-
-### Benchmark Results (Compiled with `-O3 -std=c++20`):
 ```text
 ====================================================
    ATTOFLOW HFT ENGINE - LOB BENCHMARK (C++20)     
@@ -75,50 +103,54 @@ A standalone, ultra-low latency C++20 Limit Order Book engine designed for predi
 
 ---
 
-## 2. Replay Terminal Cockpit (`dashboard/`)
+## 📊 Terminal Cockpit Panels
 
-The terminal renders a retro IBM VGA 9x16 bitmap console with 10 synchronized execution panels:
+The replay terminal renders 10 synchronized real-time quantitative monitoring modules:
 
-1. **`BOOK` [1]**: 46-column Level-2 order book ladder displaying resting bids, asks, active queue positions, and flashing trade hits.
-2. **`QUEUE POSITION` [2]**: Estimated queue depth ahead of each active resting order, probability of fill, and cancellation status.
-3. **`LATENCY` [3]**: Real-time rolling chart of feed latency and order entry/response round-trip times.
-4. **`EXECUTIONS` [4]**: Complete fill tape with time-at-touch before fill and rested duration.
-5. **`P&L & RISK COCKPIT` [5]**: Real-time cashflow accounting, mark-to-market unrealized P&L, maker rebate vs. retail fee ledger, and a dynamic **ASCII equity curve** (` ▂▃▅▆▇█`).
-6. **`ALPHA & ORDER FLOW (OFI)` [6]**: Cont-Kukanov-Stoikov Order Flow Imbalance, micro-price divergence, and retro volume ratio pressure gauges (`[████████░░░░]`).
-7. **`MARKET` [7]**: 60-second rolling mid-price chart and cumulative inventory position graph.
-8. **`TRADES` [8]**: Tick-by-tick public trade flow (buyer/seller initiated).
-9. **`ENGINE` [9]**: Simulation telemetry processing over **$6.14\text{ million}$ events per wall-clock second**.
-10. **`COLLECTOR` [0]**: WebSocket stream health, message throughput, and packet jitter warnings.
+| Panel | Module Name | Features & Indicators |
+| :---: | :--- | :--- |
+| **`1`** | **Level-2 Book Ladder** | 46-column orderbook ladder, resting bids/asks, active queue position markers, trade flash overlays. |
+| **`2`** | **Queue Position** | Live volume ahead of active orders, fill probability, cancellation status. |
+| **`3`** | **Latency Monitor** | Real-time sparkline graph of feed packet latency & order round-trip time (RTT). |
+| **`4`** | **Executions** | Fill tape with time-at-touch before fill and rested duration. |
+| **`5`** | **P&L & Risk Cockpit** | Real-time cashflow accounting, mark-to-market unrealized P&L, maker rebate vs fee breakdown, ASCII equity curve (` ▂▃▅▆▇█`). |
+| **`6`** | **Alpha & OFI** | Cont-Kukanov-Stoikov Order Flow Imbalance, micro-price divergence, volume ratio pressure gauges (`[████████░░░░]`). |
+| **`7`** | **Market** | 60-second rolling mid-price chart & cumulative inventory position graph. |
+| **`8`** | **Trades** | Microsecond public trade feed with buyer/seller initiation breakdown. |
+| **`9`** | **Engine Status** | Replay telemetry showing processing rates exceeding **6,140,000 events/sec**. |
+| **`0`** | **Collector** | Live WebSocket connection stats, message throughput graph, packet jitter warnings. |
 
 ---
 
-## Mathematical Foundations
+## 📐 Mathematical Models
 
 ### 1. Book Pressure (Micro-Price Fair Value)
-Rather than simple mid-price, the engine computes the instantaneous order book pressure:
 $$P_{\text{micro}} = \frac{P_{\text{bid}} \cdot Q_{\text{ask}} + P_{\text{ask}} \cdot Q_{\text{bid}}}{Q_{\text{bid}} + Q_{\text{ask}}}$$
 
 ### 2. Order Flow Imbalance (OFI)
-Order Flow Imbalance captures microsecond net volume shift across tick intervals:
 $$\text{OFI}_t = I_{\{P_{b,t} \ge P_{b,t-1}\}} Q_{b,t} - I_{\{P_{b,t} \le P_{b,t-1}\}} Q_{b,t-1} - I_{\{P_{a,t} \le P_{a,t-1}\}} Q_{a,t} + I_{\{P_{a,t} \ge P_{a,t-1}\}} Q_{a,t-1}$$
 
 ### 3. Inventory Skew (Avellaneda-Stoikov variant)
-Quotes are continuously adjusted based on current accumulated inventory $q$:
 $$\delta_{\text{skew}} = -\gamma \cdot q$$
-Biasing quotes to offload inventory and prevent catastrophic directional drawdowns.
 
 ---
 
-## Getting Started
+## 🛠️ Quick Start Guide
 
-### 1. Build & Run C++20 Core Benchmark
+### 1. Compile & Run C++20 Core Benchmark
 ```bash
 cd cpp_core
 g++ -std=c++20 -O3 -Iinclude src/orderbook.cpp benchmark/benchmark_lob.cpp -o benchmark_lob
 ./benchmark_lob
 ```
 
-### 2. Launch the Replay Terminal
+### 2. Run Rust Event Runner
+```bash
+cd runner
+cargo run --release
+```
+
+### 3. Launch Replay Terminal UI
 ```bash
 cd dashboard
 npm install
@@ -126,20 +158,26 @@ npm run dev
 ```
 Open **`http://127.0.0.1:5180/?session=sample`** in your browser.
 
-### Terminal Hotkeys:
-* `SPACE`: Play / Pause simulation replay
-* `←` / `→`: Seek backward / forward 5 seconds (`Shift + Arrow` for 30s)
-* `↑` / `↓`: Double / half playback speed
-* `1` – `9`: Fullscreen focus on any individual panel
-* `0`: Return to 10-panel cockpit grid
-* `L`: Toggle between Landscape (desktop) and Portrait (mobile 9:16)
-* `B`: Toggle order book ladder mode (active levels vs every tick)
-* `R`: Restart replay
+---
+
+## ⌨️ Terminal Navigation Hotkeys
+
+| Key | Action |
+| :---: | :--- |
+| `SPACE` | Play / Pause simulation replay |
+| `←` / `→` | Seek backward / forward 5 seconds (`Shift + Arrow` for 30s) |
+| `↑` / `↓` | Double / half playback speed |
+| `1` – `9` | Fullscreen zoom into specific panel |
+| `0` | Return to 10-panel cockpit grid |
+| `L` | Toggle between Landscape (desktop) and Portrait (mobile 9:16) layout |
+| `B` | Toggle order book ladder mode (active levels vs every tick) |
+| `R` | Restart replay from beginning |
 
 ---
 
-## License & Author
+## 👨‍💻 Author & License
 
-Developed by **Harshwardhan Bhaskar**  
+Designed & Developed by **Harshwardhan Bhaskar**  
 GitHub: [@HarshwardhanBhaskar](https://github.com/HarshwardhanBhaskar/attoflow-hft)  
-Distributed under the MIT License.
+Repository: [attoflow-hft](https://github.com/HarshwardhanBhaskar/attoflow-hft)  
+License: **MIT License**
