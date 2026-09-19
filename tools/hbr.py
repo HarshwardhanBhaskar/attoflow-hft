@@ -1,4 +1,4 @@
-"""Reader for hftengine session recordings (.hbr) — see runner/src/record.rs for the layout.
+"""Reader for AttoFlow session recordings (.hbr) — see runner/src/record.rs for the layout.
 
     python tools/hbr.py data/recordings/<name>.hbr      # prints a summary
 """

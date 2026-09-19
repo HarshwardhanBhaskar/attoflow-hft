@@ -21,7 +21,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PY = ROOT / ".venv" / "Scripts" / "python.exe"
-RUNNER = ROOT / "runner" / "target" / "release" / "hftengine-runner.exe"
+RUNNER = ROOT / "runner" / "target" / "release" / "attoflow-runner.exe"
 
 
 def main() -> None:

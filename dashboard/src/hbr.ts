@@ -1,6 +1,6 @@
-/** Loader for hftengine session recordings (.hbr) written by runner/src/record.rs.
+/** Loader for AttoFlow session recordings (.hbr) written by runner/src/record.rs.
  *
- * Layout: "HFTREC01" | u32 header length | JSON header | pad to 8 | little-endian arrays.
+ * Layout: "ATTOFLOW" | u32 header length | JSON header | pad to 8 | little-endian arrays.
  */
 
 export type TypedArray =

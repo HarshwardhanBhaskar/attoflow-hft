@@ -1,4 +1,4 @@
-/** HFTENGINE dashboard: replays an hftbacktest session recording (.hbr) written by the runner.
+/** ATTOFLOW terminal: replays a session recording (.hbr) written by the runner.
  *
  * URL parameters
  *   session=<name>      public/sessions/<name>.hbr (+ <name>.collector.json)     default: sample

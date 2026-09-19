@@ -1,4 +1,4 @@
-/* HFTENGINE dashboard — text-mode terminal look: IBM VGA 9x16 bitmap font on a blue field,
+/* ATTOFLOW terminal — text-mode terminal look: IBM VGA 9x16 bitmap font on a blue field,
    CGA/EGA 16-colour palette, 1-character grid. Everything is sized in character cells
    (--cw x --ch) so the layout stays crisp at integer zoom levels. */
 
@@ -131,12 +131,13 @@ body:has(#app.framed) {
   box-sizing: border-box;
 }
 .work.landscape {
-  grid-template-columns: 46ch 1.15fr 1.15fr 1fr;
-  grid-template-rows: 1fr 1fr 1fr;
+  grid-template-columns: 46ch 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr 1fr 1fr;
   grid-template-areas:
-    "book queue latency engine"
-    "book pnl signals market"
-    "book fills tape log";
+    "book queue   latency  engine"
+    "book pnl     signals  market"
+    "book fills   tape     log"
+    "book collector collector collector";
 }
 .work.portrait {
   grid-template-columns: 1fr;
