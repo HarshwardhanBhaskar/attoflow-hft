@@ -160,6 +160,18 @@ Open **`http://127.0.0.1:5180/?session=sample`** in your browser.
 
 ---
 
+## 📡 Live Market WebSocket Streaming
+
+AttoFlow supports real-time live streaming directly from Binance USDT-M Futures (`wss://fstream.binance.com`).
+
+### Start Live Server:
+```bash
+python tools/live_server.py --symbol btcusdt --port 8765
+```
+Open **`http://127.0.0.1:5180/?mode=live`** to view real-time live tick data, micro-price movements, and live Order Flow Imbalance (OFI) in the terminal UI.
+
+---
+
 ## ⌨️ Terminal Navigation Hotkeys
 
 | Key | Action |

@@ -33,8 +33,11 @@ import { SignalsPanel } from "./panels/signals";
 import { TapePanel } from "./panels/tape";
 import { Session, type CollectorFacts } from "./session";
 
+import { LiveClient, type LiveFrame } from "./live";
+
 const q = new URLSearchParams(location.search);
 let sessionName = q.get("session") ?? "";
+const isLiveMode = q.get("mode") === "live";
 
 async function main(): Promise<void> {
   const app = document.getElementById("app")!;
@@ -158,8 +161,14 @@ class App {
 
     this.clock.speed = parseFloat(q.get("speed") ?? "1") || 1;
     this.clock.seek((parseFloat(q.get("t") ?? "0") || 0) * 1e9);
-    if (q.get("play") !== "0") this.clock.play();
-    this.applyLayout();
+    if (isLiveMode) {
+      const liveClient = new LiveClient("ws://127.0.0.1:8765", (frame: LiveFrame) => {
+        if (frame.type === "depth") {
+          this.clock.seek(frame.timestamp);
+        }
+      });
+      liveClient.connect();
+    }
     window.addEventListener("resize", () => this.applyLayout());
     window.addEventListener("keydown", (e) => this.onKey(e));
     this.clock.onChange = () => this.syncUrl();
@@ -200,11 +209,12 @@ class App {
     const cols = Math.floor(this.header.clientWidth / 9);
     const wide = cols >= 110;
     const medium = cols >= 72;
+    const modeTag = isLiveMode ? sp("hi", " LIVE WEBSOCKET ") : " QUANTITATIVE REPLAY TERMINAL ";
     this.header.innerHTML =
       sp("hi", " ATTOFLOW ") +
-      ` v1.0.0  │  QUANTITATIVE REPLAY TERMINAL  │  ${m.symbol}` +
-      (medium ? ` · ${m.exchange}  │  recorded ${dateOf(s.t0)}` : "") +
-      (wide ? sp("right", `session ${sessionName} `) : "");
+      ` v1.0.0  │ ${modeTag} │  ${m.symbol}` +
+      (medium ? ` · ${m.exchange}  │  ${isLiveMode ? "LIVE BINANCE STREAM" : "recorded " + dateOf(s.t0)}` : "") +
+      (wide ? sp("right", isLiveMode ? "ws://127.0.0.1:8765 " : `session ${sessionName} `) : "");
     this.keys.innerHTML = medium
       ? sp("k", "SPACE") + " play/pause  " + sp("k", "←→") + " 5s  " + sp("k", "⇑⇓") + " speed  " + sp("k", "1-9") + " panel  " + sp("k", "0") + " all  " + sp("k", "L") + " layout  " + sp("k", "R") + " restart  " + sp("k", "B") + " ladder  " + sp("k", "H") + " keys"
       : sp("k", "SPACE") + " play  " + sp("k", "←→") + " 5s  " + sp("k", "⇑⇓") + " speed  " + sp("k", "1-9") + " panel  " + sp("k", "0") + " all  " + sp("k", "L") + " " + sp("k", "R") + " " + sp("k", "B") + " " + sp("k", "H");
