@@ -169,6 +169,8 @@ class App {
       });
       liveClient.connect();
     }
+    if (q.get("play") !== "0") this.clock.play();
+    this.applyLayout();
     window.addEventListener("resize", () => this.applyLayout());
     window.addEventListener("keydown", (e) => this.onKey(e));
     this.clock.onChange = () => this.syncUrl();
